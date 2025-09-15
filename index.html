@@ -8,7 +8,7 @@
         body {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: transparent;
             font-family: 'Arial', sans-serif;
             overflow: hidden;
         }
@@ -66,7 +66,7 @@
             
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setClearColor(0x000000, 0);
+            renderer.setClearColor(0x000000, 0); // Fond transparent
             container.appendChild(renderer.domElement);
             
             // Éclairage
@@ -108,7 +108,11 @@
             let mouseDown = false;
             let mouseX = 0, mouseY = 0;
             
-            document.addEventListener('mousedown', () => mouseDown = true);
+            document.addEventListener('mousedown', (e) => {
+                mouseDown = true;
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
             document.addEventListener('mouseup', () => mouseDown = false);
             document.addEventListener('mousemove', (e) => {
                 if (!mouseDown || !model) return;
@@ -119,6 +123,45 @@
                 mouseX = e.clientX;
                 mouseY = e.clientY;
             });
+            
+            // Zoom avec la molette de la souris
+            document.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                camera.position.z += e.deltaY * 0.01;
+                camera.position.z = Math.max(1, Math.min(20, camera.position.z)); // Limites de zoom
+            }, { passive: false });
+            
+            // Zoom tactile pour mobile (pinch)
+            let lastTouchDistance = 0;
+            document.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    const touch1 = e.touches[0];
+                    const touch2 = e.touches[1];
+                    lastTouchDistance = Math.sqrt(
+                        Math.pow(touch2.clientX - touch1.clientX, 2) +
+                        Math.pow(touch2.clientY - touch1.clientY, 2)
+                    );
+                }
+            });
+            
+            document.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2) {
+                    e.preventDefault();
+                    const touch1 = e.touches[0];
+                    const touch2 = e.touches[1];
+                    const distance = Math.sqrt(
+                        Math.pow(touch2.clientX - touch1.clientX, 2) +
+                        Math.pow(touch2.clientY - touch1.clientY, 2)
+                    );
+                    
+                    if (lastTouchDistance > 0) {
+                        const delta = distance - lastTouchDistance;
+                        camera.position.z -= delta * 0.01;
+                        camera.position.z = Math.max(1, Math.min(20, camera.position.z));
+                    }
+                    lastTouchDistance = distance;
+                }
+            }, { passive: false });
             
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
